@@ -1,9 +1,12 @@
-# AI Receptionist (zonder n8n)
+# AI Receptionist (Netlify-ready)
 
-Dit project draait volledig zelfstandig:
-- Frontend chat UI
-- Eigen Node.js backend
-- OpenAI agent met tools (prijzen, beschikbaarheid, boeken, bevestigingsmail)
+Dit project draait zonder n8n en is klaar voor Netlify deploy.
+
+## Structuur
+
+- `public/` frontend
+- `netlify/functions/chat-assistent.js` API endpoint
+- `server.js` lokale server + gedeelde chatlogica
 
 ## 1) Installeren
 
@@ -18,36 +21,71 @@ npm install
 cp .env.example .env
 ```
 
-Zet minimaal dit in `.env`:
+Minimaal nodig:
 
 ```env
 OPENAI_API_KEY=sk-...
 OPENAI_MODEL=gpt-4o-mini
-PORT=3000
 TIMEZONE=Europe/Amsterdam
 ```
 
-## 3) Starten
+## 3) Lokaal draaien
 
 ```bash
 npm run dev
 ```
 
-Open daarna:
+Open: `http://localhost:3000`
 
-```text
-http://localhost:3000
+## Netlify deploy
+
+Deze app gebruikt op Netlify:
+- `public` als publish dir
+- Netlify Function op `/.netlify/functions/chat-assistent`
+- Redirect: `/api/chat-assistent` -> function
+
+### Stap voor stap
+
+1. Login op Netlify:
+   ```bash
+   npx netlify login
+   ```
+2. Link of maak site:
+   ```bash
+   npx netlify init
+   ```
+3. Zet env vars in Netlify dashboard:
+   - `OPENAI_API_KEY`
+   - `OPENAI_MODEL`
+   - `TIMEZONE`
+   - optioneel: Google/SMTP/Slack vars
+4. Deploy productie:
+   ```bash
+   npm run netlify:deploy
+   ```
+
+## GitHub push
+
+`gh` CLI staat hier niet geïnstalleerd, dus automatisch repo aanmaken is niet gelukt. Wel klaar met lokale git-commands:
+
+```bash
+cd '/Users/m/Desktop/AI assistent'
+git init
+git add .
+git commit -m "Initial AI receptionist (Netlify ready)"
 ```
 
-## API endpoint
+Maak daarna op GitHub een lege repo en koppel remote:
 
-De frontend praat standaard met:
-
-```text
-POST /api/chat-assistent
+```bash
+git branch -M main
+git remote add origin https://github.com/<jouw-gebruiker>/<jouw-repo>.git
+git push -u origin main
 ```
 
-Payload:
+## API contract
+
+Request naar `/api/chat-assistent`:
 
 ```json
 {
@@ -67,48 +105,3 @@ Response:
   "customerEmail": ""
 }
 ```
-
-## Optionele integraties
-
-### Google Calendar (echte beschikbaarheid + boeken)
-
-Vul in `.env`:
-
-```env
-GOOGLE_CLIENT_ID=
-GOOGLE_CLIENT_SECRET=
-GOOGLE_REFRESH_TOKEN=
-GOOGLE_CALENDAR_ID=primary
-```
-
-Zonder deze waarden gebruikt de app een veilige simulatie voor agenda-acties.
-
-### SMTP (bevestigingsmail)
-
-Vul in `.env`:
-
-```env
-SMTP_HOST=
-SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=
-SMTP_PASS=
-SMTP_FROM=
-```
-
-Zonder deze waarden simuleert de app het versturen van e-mail.
-
-### Slack notificaties
-
-Vul in `.env`:
-
-```env
-SLACK_WEBHOOK_URL=
-```
-
-## Troubleshooting
-
-- `OPENAI_API_KEY ontbreekt`: zet je key in `.env` en herstart de server.
-- Geen echte agenda of mail: controleer of je Google/SMTP env vars gevuld zijn.
-- Poort al in gebruik: pas `PORT` aan in `.env`.
-

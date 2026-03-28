@@ -6,7 +6,9 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "node server.js",
+    "netlify:dev": "netlify dev",
+    "netlify:deploy": "netlify deploy --prod"
   },
   "engines": {
     "node": ">=18"
