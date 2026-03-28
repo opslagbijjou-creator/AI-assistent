@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Receptionist Chat</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app">
+      <header class="app-header">
+        <div>
+          <p class="eyebrow">Frontend</p>
+          <h1>AI Receptionist Chat</h1>
+        </div>
+        <button id="newSessionBtn" class="ghost-btn" type="button">Nieuwe sessie</button>
+      </header>
+
+      <section class="settings" aria-label="API instellingen">
+        <label for="webhookUrl">Backend API URL</label>
+        <div class="settings-row">
+          <input
+            id="webhookUrl"
+            type="url"
+            placeholder="http://localhost:3000/api/chat-assistent"
+            autocomplete="off"
+          />
+          <button id="saveSettingsBtn" type="button">Opslaan</button>
+        </div>
+        <p class="hint">
+          Standaard gebruikt de app <code>/api/chat-assistent</code> op dezelfde server.
+        </p>
+      </section>
+
+      <section id="chatWindow" class="chat-window" aria-live="polite"></section>
+
+      <form id="chatForm" class="chat-form" autocomplete="off">
+        <input
+          id="messageInput"
+          type="text"
+          name="message"
+          placeholder="Typ je bericht..."
+          required
+          maxlength="1500"
+        />
+        <button id="sendBtn" type="submit">Verstuur</button>
+      </form>
+    </main>
+
+    <template id="messageTemplate">
+      <article class="message">
+        <p class="message-author"></p>
+        <p class="message-text"></p>
+      </article>
+    </template>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>

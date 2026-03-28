@@ -1,0 +1,66 @@
+{
+  "name": "AI Receptionist Proxy to Custom Backend",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-assistent",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "9f6de9f7-7db7-4db8-ab88-5807dc1b4f5f",
+      "name": "Inkomend Chatbericht",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [220, 320],
+      "webhookId": "d5336bff-499d-4bd7-b1f3-aa6d0492ef2d"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR-BACKEND-DOMAIN/api/chat-assistent",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"message\": $json.body.message, \"sessionId\": $json.body.sessionId || $json.body.callId || $execution.id, \"callId\": $json.body.callId || $json.body.sessionId || $execution.id } }}",
+        "options": {}
+      },
+      "id": "2d26922c-cb8d-4519-a58f-784d6b14339b",
+      "name": "Stuur naar Eigen Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"sessionId\": $json.sessionId || $(\"Inkomend Chatbericht\").item.json.body.sessionId || \"\", \"response\": $json.response || \"Geen antwoord ontvangen.\", \"appointmentBooked\": $json.appointmentBooked || false, \"customerEmail\": $json.customerEmail || \"\" } }}",
+        "options": {}
+      },
+      "id": "5ac454e3-44dd-4237-8483-f8a67f7492d2",
+      "name": "Antwoord naar Frontend",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [780, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Inkomend Chatbericht": {
+      "main": [[{ "node": "Stuur naar Eigen Backend", "type": "main", "index": 0 }]]
+    },
+    "Stuur naar Eigen Backend": {
+      "main": [[{ "node": "Antwoord naar Frontend", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "6f1f92df-c469-47f2-84d8-7f87a3f932dd",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "custom-backend-proxy"
+  },
+  "id": "Wm6yXqQp3r5c9TzB",
+  "tags": []
+}
