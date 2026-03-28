@@ -17,11 +17,15 @@ let typingMessageNode = null;
 loadSession();
 renderMessage(
   "assistant",
-  "Welkom! De chat gebruikt nu altijd jouw vaste webhook."
+  "Hoi met HamzaAI, waar kan ik je mee helpen?"
 );
+setupMobileViewportHandling();
 
 chatForm.addEventListener("submit", onSubmitMessage);
 newSessionBtn.addEventListener("click", resetSession);
+messageInput.addEventListener("focus", keepChatVisible);
+messageInput.addEventListener("input", keepChatVisible);
+messageInput.addEventListener("blur", onInputBlur);
 
 function loadSession() {
   const raw = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -129,7 +133,12 @@ async function onSubmitMessage(event) {
     );
   } finally {
     setLoading(false);
-    messageInput.focus();
+    if (isMobileViewport()) {
+      messageInput.blur();
+    } else {
+      messageInput.focus();
+    }
+    keepChatVisible();
   }
 }
 
@@ -226,7 +235,8 @@ function renderMessage(role, text, options = {}) {
 
 function showTypingIndicator() {
   hideTypingIndicator();
-  typingMessageNode = renderMessage("assistant", "AI typt...", { typing: true });
+  typingMessageNode = renderMessage("assistant", "Hamza is aan het typen...", { typing: true });
+  keepChatVisible();
 }
 
 function hideTypingIndicator() {
@@ -235,6 +245,7 @@ function hideTypingIndicator() {
   }
   typingMessageNode.remove();
   typingMessageNode = null;
+  keepChatVisible();
 }
 
 function formatTime(date) {
@@ -242,4 +253,45 @@ function formatTime(date) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function isMobileViewport() {
+  return window.matchMedia("(max-width: 979px)").matches;
+}
+
+function keepChatVisible() {
+  window.requestAnimationFrame(() => {
+    chatWindow.scrollTop = chatWindow.scrollHeight;
+  });
+}
+
+function onInputBlur() {
+  document.body.classList.remove("keyboard-open");
+  keepChatVisible();
+}
+
+function setupMobileViewportHandling() {
+  const setViewportHeight = () => {
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    document.documentElement.style.setProperty("--app-vh", `${Math.round(viewportHeight)}px`);
+
+    const keyboardOpen =
+      isMobileViewport() &&
+      typeof window.visualViewport?.height === "number" &&
+      window.visualViewport.height < window.innerHeight * 0.82;
+
+    document.body.classList.toggle("keyboard-open", keyboardOpen);
+    keepChatVisible();
+  };
+
+  setViewportHeight();
+  window.addEventListener("resize", setViewportHeight);
+  window.addEventListener("orientationchange", () => {
+    window.setTimeout(setViewportHeight, 180);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener("resize", setViewportHeight);
+    window.visualViewport.addEventListener("scroll", setViewportHeight);
+  }
 }
