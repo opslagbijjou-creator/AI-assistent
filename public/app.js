@@ -1,6 +1,6 @@
 const SESSION_STORAGE_KEY = "ai-receptionist-session";
 const FIXED_WEBHOOK_URL =
-  "https://hamzaautopilot.app.n8n.cloud/webhook/a90fc9a0-e849-494a-b884-e7c1d7ba77d9/chat";
+  "https://hamzaautopilot.app.n8n.cloud/webhook/fed39b97-d19a-41c1-b924-f9a6856ef1e4";
 
 const chatWindow = document.getElementById("chatWindow");
 const chatForm = document.getElementById("chatForm");
@@ -59,6 +59,7 @@ async function onSubmitMessage(event) {
 
   try {
     const payload = {
+      chatInput: text,
       message: text,
       sessionId: state.sessionId,
       callId: state.sessionId,
@@ -99,14 +100,15 @@ async function onSubmitMessage(event) {
 
     const data = parsed.data;
     const assistantText =
-      data?.response || data?.output || data?.message || "Geen antwoord ontvangen.";
+      data?.output || data?.response || data?.message || "Geen antwoord ontvangen.";
+    const normalizedAssistantText = normalizeAssistantText(assistantText, data);
 
     if (typeof data?.sessionId === "string" && data.sessionId.trim().length > 0) {
       state.sessionId = data.sessionId;
       persistSession();
     }
 
-    renderMessage("assistant", assistantText);
+    renderMessage("assistant", normalizedAssistantText);
 
     if (data?.appointmentBooked) {
       const emailText = data?.customerEmail
@@ -156,6 +158,20 @@ function truncate(value, max) {
     return value;
   }
   return `${value.slice(0, max)}...`;
+}
+
+function normalizeAssistantText(text, data) {
+  const safeText = typeof text === "string" ? text.trim() : "";
+
+  if (safeText === "firstEntryJson") {
+    return "De n8n chat-trigger heeft nog geen vervolgstappen. Verbind de trigger met een AI node (bijv. AI Agent + OpenAI Model).";
+  }
+
+  if (!safeText && data && typeof data === "object" && Object.keys(data).length === 0) {
+    return "Leeg antwoord van n8n. Controleer of je workflow na de trigger nog nodes heeft.";
+  }
+
+  return safeText || "Geen antwoord ontvangen.";
 }
 
 function getErrorMessage(error) {
