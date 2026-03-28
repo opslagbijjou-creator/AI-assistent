@@ -1,0 +1,237 @@
+{
+  "name": "AI Receptionist Proxy Failsafe v4",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-assistent-v4",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "4f8f80a6-84d5-4c2e-9868-603e3f4b2d01",
+      "name": "Inkomend Chatbericht",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [200, 320],
+      "webhookId": "725fcbf4-5fb1-4d38-90f6-fce7804e7f31"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "message",
+              "type": "string",
+              "value": "={{ String($json.body?.message || '').trim() }}"
+            },
+            {
+              "id": "2",
+              "name": "sessionId",
+              "type": "string",
+              "value": "={{ $json.body?.sessionId || $json.body?.callId || $execution.id }}"
+            },
+            {
+              "id": "3",
+              "name": "callId",
+              "type": "string",
+              "value": "={{ $json.body?.callId || $json.body?.sessionId || $execution.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f3ebd49f-2050-4571-a4e3-07cc585fd594",
+      "name": "Normaliseer Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [420, 320]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8b1775ab-af2d-4b46-b8cf-61f74c2a5197",
+              "leftValue": "={{ $json.message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "b0f8f9c7-46f8-4536-9826-a11eb8e34b63",
+      "name": "Heeft Bericht",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [640, 320]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR-NETLIFY-SITE.netlify.app/api/chat-assistent",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"message\": $json.message, \"sessionId\": $json.sessionId, \"callId\": $json.callId } }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "bcf9d9aa-4df7-4836-8256-4a2c94a3ec95",
+      "name": "Stuur naar Netlify Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 240],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "sessionId",
+              "type": "string",
+              "value": "={{ $json.sessionId || $(\"Normaliseer Input\").item.json.sessionId || '' }}"
+            },
+            {
+              "id": "2",
+              "name": "response",
+              "type": "string",
+              "value": "={{ $json.response || $json.error || $json.message || $json.details || 'Backend gaf geen geldig antwoord.' }}"
+            },
+            {
+              "id": "3",
+              "name": "appointmentBooked",
+              "type": "boolean",
+              "value": "={{ !!$json.appointmentBooked }}"
+            },
+            {
+              "id": "4",
+              "name": "customerEmail",
+              "type": "string",
+              "value": "={{ $json.customerEmail || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "045b3730-8f3d-49af-bde7-7f53a56f9ca9",
+      "name": "Normaliseer Backend Antwoord",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1120, 240]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"sessionId\": $json.sessionId, \"response\": $json.response, \"appointmentBooked\": $json.appointmentBooked, \"customerEmail\": $json.customerEmail } }}",
+        "options": {}
+      },
+      "id": "59b8eac2-f431-45ad-a9fb-2dd67ff7bb8a",
+      "name": "Antwoord naar Frontend",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1360, 240]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"sessionId\": $(\"Normaliseer Input\").item.json.sessionId || '', \"response\": \"Stuur eerst een bericht mee in veld 'message'.\", \"appointmentBooked\": false, \"customerEmail\": \"\" } }}",
+        "options": {}
+      },
+      "id": "dd33d785-49ba-4990-90e8-436f5f3c8f03",
+      "name": "Antwoord Ongeldige Input",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 420]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Inkomend Chatbericht": {
+      "main": [
+        [
+          {
+            "node": "Normaliseer Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliseer Input": {
+      "main": [
+        [
+          {
+            "node": "Heeft Bericht",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Heeft Bericht": {
+      "main": [
+        [
+          {
+            "node": "Stuur naar Netlify Backend",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Antwoord Ongeldige Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Stuur naar Netlify Backend": {
+      "main": [
+        [
+          {
+            "node": "Normaliseer Backend Antwoord",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normaliseer Backend Antwoord": {
+      "main": [
+        [
+          {
+            "node": "Antwoord naar Frontend",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9f81ce79-6f7f-4a89-a69f-0f62889dc6ad",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "proxy-failsafe-v4"
+  },
+  "id": "tzW08P4dzmQf3kAc",
+  "tags": []
+}

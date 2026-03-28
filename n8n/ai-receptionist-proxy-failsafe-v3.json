@@ -1,0 +1,110 @@
+{
+  "name": "AI Receptionist Proxy Failsafe v3",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "chat-assistent-v3",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "19a7f670-bdc4-4b77-9842-65fb98c73b5f",
+      "name": "Inkomend Chatbericht",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [220, 320],
+      "webhookId": "b0505232-c868-4ef9-b7d5-5660904b4185"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://YOUR-NETLIFY-SITE.netlify.app/api/chat-assistent",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"message\": $json.body.message, \"sessionId\": $json.body.sessionId || $json.body.callId || $execution.id, \"callId\": $json.body.callId || $json.body.sessionId || $execution.id } }}",
+        "options": {
+          "timeout": 60000
+        }
+      },
+      "id": "6b05afcd-b08e-4cf7-89f6-3740f24f0155",
+      "name": "Stuur naar Netlify Backend",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [500, 320],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "sessionId",
+              "type": "string",
+              "value": "={{ $json.sessionId || $(\"Inkomend Chatbericht\").item.json.body.sessionId || $(\"Inkomend Chatbericht\").item.json.body.callId || '' }}"
+            },
+            {
+              "id": "2",
+              "name": "response",
+              "type": "string",
+              "value": "={{ $json.response || $json.error || $json.details || 'Backend gaf geen geldig antwoord.' }}"
+            },
+            {
+              "id": "3",
+              "name": "appointmentBooked",
+              "type": "boolean",
+              "value": "={{ $json.appointmentBooked || false }}"
+            },
+            {
+              "id": "4",
+              "name": "customerEmail",
+              "type": "string",
+              "value": "={{ $json.customerEmail || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6c3d3067-83ea-4fc2-962b-499f6cdd337a",
+      "name": "Normaliseer Antwoord",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [760, 320]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"sessionId\": $json.sessionId, \"response\": $json.response, \"appointmentBooked\": $json.appointmentBooked, \"customerEmail\": $json.customerEmail } }}",
+        "options": {}
+      },
+      "id": "7e8cae1f-908f-43cf-8e78-4f0fcedf4495",
+      "name": "Antwoord naar Frontend",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1000, 320]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Inkomend Chatbericht": {
+      "main": [[{ "node": "Stuur naar Netlify Backend", "type": "main", "index": 0 }]]
+    },
+    "Stuur naar Netlify Backend": {
+      "main": [[{ "node": "Normaliseer Antwoord", "type": "main", "index": 0 }]]
+    },
+    "Normaliseer Antwoord": {
+      "main": [[{ "node": "Antwoord naar Frontend", "type": "main", "index": 0 }]]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "f6af568c-b305-4b80-8bf4-f7068e9727ce",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "proxy-failsafe-v3"
+  },
+  "id": "R4a67QfJ0M3aYn1W",
+  "tags": []
+}

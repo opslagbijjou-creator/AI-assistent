@@ -1,76 +1,46 @@
-const STORAGE_KEY = "ai-receptionist-settings";
-const DEFAULT_WEBHOOK_URL =
-  window.location.origin.startsWith("http")
-    ? `${window.location.origin}/api/chat-assistent`
-    : "http://localhost:3000/api/chat-assistent";
+const SESSION_STORAGE_KEY = "ai-receptionist-session";
+const FIXED_WEBHOOK_URL =
+  "https://hamzaautopilot.app.n8n.cloud/webhook/a90fc9a0-e849-494a-b884-e7c1d7ba77d9/chat";
 
 const chatWindow = document.getElementById("chatWindow");
 const chatForm = document.getElementById("chatForm");
 const messageInput = document.getElementById("messageInput");
 const sendBtn = document.getElementById("sendBtn");
-const saveSettingsBtn = document.getElementById("saveSettingsBtn");
-const webhookUrlInput = document.getElementById("webhookUrl");
 const newSessionBtn = document.getElementById("newSessionBtn");
 const messageTemplate = document.getElementById("messageTemplate");
 
 const state = {
-  webhookUrl: DEFAULT_WEBHOOK_URL,
   sessionId: crypto.randomUUID(),
 };
 
-loadSettings();
+loadSession();
 renderMessage(
   "assistant",
-  "Welkom! Je eigen backend staat klaar, we kunnen direct chatten."
+  "Welkom! De chat gebruikt nu altijd jouw vaste webhook."
 );
 
 chatForm.addEventListener("submit", onSubmitMessage);
-saveSettingsBtn.addEventListener("click", saveSettings);
 newSessionBtn.addEventListener("click", resetSession);
 
-function loadSettings() {
-  webhookUrlInput.value = state.webhookUrl;
-
-  const raw = localStorage.getItem(STORAGE_KEY);
+function loadSession() {
+  const raw = localStorage.getItem(SESSION_STORAGE_KEY);
   if (!raw) {
     return;
   }
 
   try {
     const saved = JSON.parse(raw);
-    if (typeof saved.webhookUrl === "string") {
-      const savedUrl = saved.webhookUrl.trim();
-      state.webhookUrl = savedUrl || DEFAULT_WEBHOOK_URL;
-      webhookUrlInput.value = state.webhookUrl;
-    }
     if (typeof saved.sessionId === "string" && saved.sessionId.trim().length > 0) {
       state.sessionId = saved.sessionId;
     }
   } catch {
-    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem(SESSION_STORAGE_KEY);
   }
-
-  // Diagnose veelvoorkomende migratie-fout: oude n8n webhook nog in localStorage.
-  if (state.webhookUrl.includes("n8n.cloud/webhook")) {
-    renderMessage(
-      "system",
-      "Let op: je gebruikt nog een n8n webhook URL. Als je naar Netlify bent gemigreerd, zet API URL op /api/chat-assistent."
-    );
-  }
-}
-
-function saveSettings() {
-  state.webhookUrl = webhookUrlInput.value.trim();
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ webhookUrl: state.webhookUrl, sessionId: state.sessionId })
-  );
-  renderMessage("system", "API URL opgeslagen.");
 }
 
 function resetSession() {
   state.sessionId = crypto.randomUUID();
-  persistState();
+  persistSession();
   renderMessage("system", "Nieuwe chatsessie gestart.");
 }
 
@@ -79,11 +49,6 @@ async function onSubmitMessage(event) {
 
   const text = messageInput.value.trim();
   if (!text) {
-    return;
-  }
-
-  if (!state.webhookUrl) {
-    renderMessage("system", "Vul eerst je API URL in.");
     return;
   }
 
@@ -99,7 +64,7 @@ async function onSubmitMessage(event) {
       callId: state.sessionId,
     };
 
-    const response = await fetch(state.webhookUrl, {
+    const response = await fetch(FIXED_WEBHOOK_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -119,7 +84,7 @@ async function onSubmitMessage(event) {
 
     if (!rawBody.trim()) {
       throw new Error(
-        `API gaf een lege response (HTTP ${response.status}). Endpoint: ${state.webhookUrl}`
+        `API gaf een lege response (HTTP ${response.status}). Endpoint: ${FIXED_WEBHOOK_URL}`
       );
     }
 
@@ -138,7 +103,7 @@ async function onSubmitMessage(event) {
 
     if (typeof data?.sessionId === "string" && data.sessionId.trim().length > 0) {
       state.sessionId = data.sessionId;
-      persistState();
+      persistSession();
     }
 
     renderMessage("assistant", assistantText);
@@ -200,10 +165,10 @@ function getErrorMessage(error) {
   return String(error);
 }
 
-function persistState() {
+function persistSession() {
   localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify({ webhookUrl: state.webhookUrl, sessionId: state.sessionId })
+    SESSION_STORAGE_KEY,
+    JSON.stringify({ sessionId: state.sessionId })
   );
 }
 
