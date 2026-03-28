@@ -1,0 +1,348 @@
+{
+  "name": "AI Receptionist Webhook fed39 Stable",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "fed39b97-d19a-41c1-b924-f9a6856ef1e4",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "5d0b7d8d-a9c6-4ca6-b18e-ac763fd2c285",
+      "name": "Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        320,
+        300
+      ],
+      "webhookId": "fed39b97-d19a-41c1-b924-f9a6856ef1e4"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.chatInput || $json.body.message || '' }}",
+        "options": {
+          "systemMessage": "Je bent een professionele AI-receptionist.\nAntwoord standaard in het Nederlands, kort en duidelijk.\n\nTijdregels:\n- Gebruik standaard tijdzone Europe/Amsterdam (CET/CEST).\n- Vraag NIET naar tijdzone, behalve als de klant expliciet zegt dat hij in een andere tijdzone zit.\n- Als klant zegt 'morgen 13:00', interpreteer dit als Europe/Amsterdam.\n- Als eindtijd ontbreekt, gebruik standaard 60 minuten duur en ga door.\n\nBoekingsregels:\n- Gebruik Create Appointment alleen met: startTime, endTime, summary, attendeeEmail.\n- attendeeEmail moet een echt e-mailadres zijn zoals naam@domein.nl.\n- Als e-mail ontbreekt of ongeldig is, vraag alleen om het e-mailadres.\n- Stuur tijden naar tools in ISO 8601 met offset (+01:00 of +02:00).\n- Als summary ontbreekt, gebruik: 'Afspraak met klant'.",
+          "maxIterations": 15,
+          "returnIntermediateSteps": false,
+          "enableStreaming": false
+        }
+      },
+      "id": "44601e9f-b049-4f6c-911b-ed2ad2dddafe",
+      "name": "AI Receptionist Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        760,
+        300
+      ],
+      "continueOnFail": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-5-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "a4cba278-2cef-4426-91a4-b8e4a2490ecd",
+      "name": "OpenAI GPT-5 Mini",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        560,
+        540
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "a57eiB5RSCZJnMpv",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $json.body.sessionId || $json.body.callId || $execution.id }}",
+        "contextWindowLength": 10
+      },
+      "id": "51a3d37d-9aa2-4bca-8774-372348331eb6",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.3,
+      "position": [
+        320,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "description": "Returns pricing information for services. Input should be the service name or type.",
+        "jsCode": "const query = String($input.query || '').toLowerCase();\n\nconst pricing = {\n  consultation: { price: 75, duration: '30 min', description: 'Initial consultation' },\n  standard: { price: 150, duration: '1 hour', description: 'Standard service' },\n  premium: { price: 250, duration: '1.5 hours', description: 'Premium service package' },\n  enterprise: { price: 500, duration: '2 hours', description: 'Enterprise solution' }\n};\n\nfor (const [key, value] of Object.entries(pricing)) {\n  if (query.includes(key)) {\n    return `${value.description}: €${value.price} for ${value.duration}`;\n  }\n}\n\nreturn 'Available services: Consultation (€75), Standard (€150), Premium (€250), Enterprise (€500). Please specify which service you are interested in.';"
+      },
+      "id": "9f70781f-ee63-448d-8104-b7c0990ce171",
+      "name": "Get Pricing",
+      "type": "@n8n/n8n-nodes-langchain.toolCode",
+      "typeVersion": 1.3,
+      "position": [
+        700,
+        540
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "calendar",
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "timeMin": "={{ $fromAI('startTime', 'Start time in ISO 8601 format (e.g., 2026-03-29T10:00:00+01:00)') }}",
+        "timeMax": "={{ $fromAI('endTime', 'End time in ISO 8601 format (e.g., 2026-03-29T11:00:00+01:00)') }}",
+        "options": {
+          "outputFormat": "availability"
+        }
+      },
+      "id": "03462e78-e857-46ac-ac8f-45c6d4aaec9a",
+      "name": "Check Availability",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        840,
+        540
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "xb5t1lyebLwy4474",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "mode": "list",
+          "value": "primary"
+        },
+        "start": "={{ $fromAI('startTime', 'Appointment start time in ISO 8601 format') }}",
+        "end": "={{ $fromAI('endTime', 'Appointment end time in ISO 8601 format') }}",
+        "additionalFields": {
+          "attendees": "={{ (() => { const raw = $fromAI('attendeeEmail', 'Customer email address'); if (!raw) return []; const m = String(raw).trim().match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/); return m ? [m[0]] : []; })() }}",
+          "description": "={{ $fromAI('description', 'Appointment description including customer details') }}",
+          "sendUpdates": "all",
+          "summary": "={{ $fromAI('summary', 'Appointment title/summary') }}"
+        }
+      },
+      "id": "9fa2907d-902d-438c-8653-c0a7e68db17c",
+      "name": "Create Appointment",
+      "type": "n8n-nodes-base.googleCalendarTool",
+      "typeVersion": 1.3,
+      "position": [
+        980,
+        540
+      ],
+      "credentials": {
+        "googleCalendarOAuth2Api": {
+          "id": "xb5t1lyebLwy4474",
+          "name": "Google Calendar OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $fromAI('recipientEmail', 'Customer email address') }}",
+        "subject": "={{ $fromAI('subject', 'Email subject line') }}",
+        "message": "={{ $fromAI('emailBody', 'Email body content in HTML format') }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "b4ff1c9a-0f9b-4128-a982-3b1b54c4e094",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.gmailTool",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        540
+      ],
+      "webhookId": "d3a24337-96c5-412b-9124-b0f562e30424",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "sbZ69BALBX1CSYNA",
+          "name": "Gmail OAuth2 API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1",
+              "name": "sessionId",
+              "type": "string",
+              "value": "={{ $(\"Webhook\").item.json.body.sessionId || $(\"Webhook\").item.json.body.callId || $execution.id }}"
+            },
+            {
+              "id": "2",
+              "name": "response",
+              "type": "string",
+              "value": "={{ $json.output || $json.error?.message || 'Er trad een fout op in de AI agent.' }}"
+            },
+            {
+              "id": "3",
+              "name": "appointmentBooked",
+              "type": "boolean",
+              "value": "={{ ($json.output || '').toLowerCase().includes('afspraak') && (($json.output || '').toLowerCase().includes('bevestigd') || ($json.output || '').toLowerCase().includes('ingepland')) }}"
+            },
+            {
+              "id": "4",
+              "name": "customerEmail",
+              "type": "string",
+              "value": "={{ ($json.output || '').match(/[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}/)?.[0] || '' }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8b4f817e-bf72-4f5d-85e3-e11210a844cb",
+      "name": "Format Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1020,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"sessionId\": $json.sessionId, \"response\": $json.response, \"appointmentBooked\": $json.appointmentBooked, \"customerEmail\": $json.customerEmail } }}",
+        "options": {}
+      },
+      "id": "33774f66-c6c2-416f-bd84-2cfb2c4c27eb",
+      "name": "Respond to Webhook",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1260,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Receptionist Agent": {
+      "main": [
+        [
+          {
+            "node": "Format Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Response": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI GPT-5 Mini": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Pricing": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Availability": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Appointment": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Receptionist Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "378eb97585717b0901dad5c0ca741946e59bc5fccb3bcfd4f81e852d72a75eef"
+  }
+}

@@ -4,43 +4,74 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>AI Receptionist Chat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Syne:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <main class="app">
-      <header class="app-header">
-        <div>
-          <p class="eyebrow">Frontend</p>
-          <h1>AI Receptionist Chat</h1>
-        </div>
-        <button id="newSessionBtn" class="ghost-btn" type="button">Nieuwe sessie</button>
-      </header>
+    <div class="ambient" aria-hidden="true">
+      <div class="blob blob-a"></div>
+      <div class="blob blob-b"></div>
+      <div class="grain"></div>
+    </div>
 
-      <section class="settings" aria-label="Verbinding">
-        <p class="hint">
-          Verbonden met vaste webhook endpoint.
+    <main class="layout">
+      <aside class="brand-panel">
+        <p class="eyebrow">AI Frontdesk</p>
+        <h1>Plan en chat in dezelfde flow.</h1>
+        <p class="lead">
+          Van vraag naar afspraak in enkele berichten, zonder extra schermen of keuzemenu's.
         </p>
+        <ul class="feature-list">
+          <li>Direct antwoord op diensten en prijzen</li>
+          <li>Slimme afspraakflow met e-mailbevestiging</li>
+          <li>Vaste webhook, geen handmatige instellingen</li>
+        </ul>
+        <div class="status-card">
+          <span class="status-dot"></span>
+          <div>
+            <p class="status-title">Realtime Verbonden</p>
+            <p class="status-text">Webhook staat vast op jouw n8n endpoint</p>
+          </div>
+        </div>
+      </aside>
+
+      <section class="chat-card">
+        <header class="chat-header">
+          <div>
+            <p class="eyebrow">Receptionist</p>
+            <h2>Live Chat</h2>
+          </div>
+          <button id="newSessionBtn" class="ghost-btn" type="button">Nieuwe sessie</button>
+        </header>
+        <p class="connection-pill">Vaste webhook actief</p>
+
+        <section id="chatWindow" class="chat-window" aria-live="polite"></section>
+
+        <form id="chatForm" class="chat-form" autocomplete="off">
+          <label class="sr-only" for="messageInput">Je bericht</label>
+          <input
+            id="messageInput"
+            type="text"
+            name="message"
+            placeholder="Typ je bericht..."
+            required
+            maxlength="1500"
+          />
+          <button id="sendBtn" type="submit">Verstuur</button>
+        </form>
       </section>
-
-      <section id="chatWindow" class="chat-window" aria-live="polite"></section>
-
-      <form id="chatForm" class="chat-form" autocomplete="off">
-        <input
-          id="messageInput"
-          type="text"
-          name="message"
-          placeholder="Typ je bericht..."
-          required
-          maxlength="1500"
-        />
-        <button id="sendBtn" type="submit">Verstuur</button>
-      </form>
     </main>
 
     <template id="messageTemplate">
       <article class="message">
         <p class="message-author"></p>
         <p class="message-text"></p>
+        <p class="message-time"></p>
       </article>
     </template>
 

@@ -12,6 +12,7 @@ const messageTemplate = document.getElementById("messageTemplate");
 const state = {
   sessionId: crypto.randomUUID(),
 };
+let typingMessageNode = null;
 
 loadSession();
 renderMessage(
@@ -56,6 +57,7 @@ async function onSubmitMessage(event) {
   messageInput.value = "";
 
   setLoading(true);
+  showTypingIndicator();
 
   try {
     const payload = {
@@ -108,6 +110,7 @@ async function onSubmitMessage(event) {
       persistSession();
     }
 
+    hideTypingIndicator();
     renderMessage("assistant", normalizedAssistantText);
 
     if (data?.appointmentBooked) {
@@ -117,6 +120,7 @@ async function onSubmitMessage(event) {
       renderMessage("system", emailText);
     }
   } catch (error) {
+    hideTypingIndicator();
     renderMessage(
       "system",
       `Fout bij versturen: ${getErrorMessage(
@@ -194,11 +198,12 @@ function setLoading(loading) {
   sendBtn.textContent = loading ? "Verzenden..." : "Verstuur";
 }
 
-function renderMessage(role, text) {
+function renderMessage(role, text, options = {}) {
   const fragment = messageTemplate.content.cloneNode(true);
   const node = fragment.querySelector(".message");
   const author = fragment.querySelector(".message-author");
   const content = fragment.querySelector(".message-text");
+  const time = fragment.querySelector(".message-time");
 
   const authorByRole = {
     user: "Jij",
@@ -207,9 +212,34 @@ function renderMessage(role, text) {
   };
 
   node.classList.add(`message-${role}`);
+  if (options.typing) {
+    node.classList.add("message-typing");
+  }
   author.textContent = authorByRole[role] ?? "Bericht";
   content.textContent = text;
+  time.textContent = options.typing ? "Nu" : formatTime(new Date());
 
   chatWindow.appendChild(fragment);
   chatWindow.scrollTop = chatWindow.scrollHeight;
+  return node;
+}
+
+function showTypingIndicator() {
+  hideTypingIndicator();
+  typingMessageNode = renderMessage("assistant", "AI typt...", { typing: true });
+}
+
+function hideTypingIndicator() {
+  if (!typingMessageNode) {
+    return;
+  }
+  typingMessageNode.remove();
+  typingMessageNode = null;
+}
+
+function formatTime(date) {
+  return date.toLocaleTimeString("nl-NL", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
