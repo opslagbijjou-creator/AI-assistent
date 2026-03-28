@@ -49,6 +49,14 @@ function loadSettings() {
   } catch {
     localStorage.removeItem(STORAGE_KEY);
   }
+
+  // Diagnose veelvoorkomende migratie-fout: oude n8n webhook nog in localStorage.
+  if (state.webhookUrl.includes("n8n.cloud/webhook")) {
+    renderMessage(
+      "system",
+      "Let op: je gebruikt nog een n8n webhook URL. Als je naar Netlify bent gemigreerd, zet API URL op /api/chat-assistent."
+    );
+  }
 }
 
 function saveSettings() {
@@ -111,7 +119,7 @@ async function onSubmitMessage(event) {
 
     if (!rawBody.trim()) {
       throw new Error(
-        `API gaf een lege response (HTTP ${response.status}). Controleer je backend logs.`
+        `API gaf een lege response (HTTP ${response.status}). Endpoint: ${state.webhookUrl}`
       );
     }
 
